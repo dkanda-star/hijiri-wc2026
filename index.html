@@ -1115,7 +1115,7 @@ COUNTRIES.forEach(c => {
 // id: 試合番号, date: 日本時間, t1/t2: チーム, bc: 放送局, bcClass, phase, score: null=未定/string=結果
 const MATCHES_MASTER = [
   // ===== グループステージ 第1節 =====
-  {id:1, date:"6/12(金) 04:00", t1:"メキシコ",    t2:"南アフリカ",          phase:"GL第1節", group:"A", bc:"NHK",  bcClass:"bc-nhk",  score:"2-0"},
+  {id:1, date:"6/12(金) 04:00", t1:"メキシコ",    t2:"南アフリカ",          phase:"GL第1節", group:"A", bc:"NHK",  bcClass:"bc-nhk",  score:"2-0", youtube:"https://www.youtube.com/watch?v=Ht804w5UO0E&pp=ygUq44Ov44O844Or44OJ44Kr44OD44OXIOODj-OCpOODqeOCpOODiCAyMDI2"},
   {id:2, date:"6/12(金) 11:00", t1:"韓国",        t2:"チェコ",              phase:"GL第1節", group:"A", bc:"DAZN", bcClass:"bc-dazn", score:null},
   {id:3, date:"6/13(土) 04:00", t1:"カナダ",      t2:"ボスニア・H",          phase:"GL第1節", group:"B", bc:"NHK",  bcClass:"bc-nhk",  score:null},
   {id:4, date:"6/13(土) 10:00", t1:"アメリカ",    t2:"パラグアイ",           phase:"GL第1節", group:"C", bc:"DAZN", bcClass:"bc-dazn", score:null},
@@ -1333,7 +1333,7 @@ function getMatches() {
   return MATCHES_MASTER.map(m => ({
     ...m,
     score:   scores[String(m.id)]?.score   ?? m.score,
-    youtube: scores[String(m.id)]?.youtube ?? '',
+    youtube: scores[String(m.id)]?.youtube || m.youtube || '', // スプレッドシート優先、なければマスターデータ
     t1: teams[String(m.id)]?.t1 ?? m.t1,
     t2: teams[String(m.id)]?.t2 ?? m.t2,
   }));
