@@ -2077,8 +2077,8 @@ async function saveMatchScore_admin() {
   if (!id) { showToast('試合を選択してください', true); return; }
   const score = document.getElementById('score-preview').textContent;
   console.log('[SCORE] スコア:', score);
-  if (!score || score === '0-0') {
-    showToast('スコアを入力してください（0-0は保存できません）', true); return;
+  if (!score) {
+    showToast('スコアを入力してください', true); return;
   }
   await saveMatchScore(id, score);
   console.log('[SCORE] GAS保存完了');
