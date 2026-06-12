@@ -1239,11 +1239,13 @@ async function gasGet() {
   if (_cache) return _cache;
   showLoading(true);
   try {
-    const res = await fetch(`${GAS_URL}?action=getAll`);
-    const data = await res.json();
+    const res = await fetch(`${GAS_URL}?action=getAll`, { redirect: 'follow' });
+    const text = await res.text();
+    const data = JSON.parse(text);
     _cache = data;
     return data;
   } catch(e) {
+    console.error('[GAS] getAll エラー:', e);
     showToast('通信エラー。再読み込みしてください', true);
     return { entries: [], scores: [], teams: [], settings: [], results: [] };
   } finally {
@@ -1261,8 +1263,10 @@ async function gasPost(action, payload) {
     });
     const url = `${GAS_URL}?${params.toString()}`;
     console.log('[GAS] URL:', url);
-    const res = await fetch(url);
-    const data = await res.json();
+    const res = await fetch(url, { redirect: 'follow' });
+    const text = await res.text();
+    console.log('[GAS] レスポンス raw:', text.substring(0, 200));
+    const data = JSON.parse(text);
     console.log('[GAS] レスポンス:', data);
     _cache = null;
     return data;
