@@ -1467,6 +1467,8 @@ async function submitEntry() {
   btn.innerHTML = '<span class="spinner"></span>送信中...';
   btn.disabled = true;
   const result = await DB.addEntry(window._pendingEntry);
+  _cache = null;
+  await gasGet();
   btn.innerHTML = '🚀 エントリーする';
   btn.disabled = false;
   if (result?.error) {
@@ -2029,8 +2031,10 @@ async function saveMatchScore_admin() {
   const id = parseInt(document.getElementById('admin-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
   const score = document.getElementById('score-preview').textContent;
-  saveMatchScore(id, score);
-  await propagateWinner(id, score);  // ← 自動反映
+  await saveMatchScore(id, score);   // ← await追加
+  _cache = null;                     // ← キャッシュ強制クリア
+  await gasGet();                    // ← 最新データ再取得
+  await propagateWinner(id, score);
   await initAdminMatchSelect();
   await initAdminTeamMatchSelect();
   showToast(`✅ #${id} "${score}" を保存しました`);
@@ -2040,8 +2044,10 @@ async function saveMatchScore_admin() {
 async function clearMatchScore_admin() {
   const id = parseInt(document.getElementById('admin-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
-  saveMatchScore(id, null);
-  await clearPropagation(id);  // ← 自動クリア
+  await saveMatchScore(id, null);    // ← await追加
+  _cache = null;                     // ← キャッシュ強制クリア
+  await gasGet();                    // ← 最新データ再取得
+  await clearPropagation(id);
   _scoreState = { g1:0, g2:0, pk1:0, pk2:0, type:'normal' };
   applyScoreState();
   await initAdminMatchSelect();
