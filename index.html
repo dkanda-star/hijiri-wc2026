@@ -762,17 +762,42 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">👟 得点王 — 国を選択 <span class="pts">6P</span></label>
-          <select class="form-select" id="inp-scorer-country" onchange="updateScorerPlayers()">
-            <option value="">-- 国を選択 --</option>
+          <label class="form-label">👟 得点王 <span class="pts">6P</span></label>
+          <select class="form-select" id="inp-scorer-select" onchange="toggleScorerOther()">
+            <option value="">-- 選択してください --</option>
+            <option value="ラウタロ・マルティネス">🇦🇷 ラウタロ・マルティネス</option>
+            <option value="上田綺世">🇯🇵 上田綺世</option>
+            <option value="ウスマン・デンベレ">🇫🇷 ウスマン・デンベレ</option>
+            <option value="ゴンサロ・ラモス">🇵🇹 ゴンサロ・ラモス</option>
+            <option value="ヴィニシウス・ジュニオール">🇧🇷 ヴィニシウス・ジュニオール</option>
+            <option value="ミケル・オヤルサバル">🇪🇸 ミケル・オヤルサバル</option>
+            <option value="ジャマル・ムシアラ">🇩🇪 ジャマル・ムシアラ</option>
+            <option value="ハリー・ケイン">🇬🇧 ハリー・ケイン</option>
+            <option value="ルイス・ディアス">🇨🇴 ルイス・ディアス</option>
+            <option value="マイケル・オリーセ">🇫🇷 マイケル・オリーセ</option>
+            <option value="ネイマール">🇧🇷 ネイマール</option>
+            <option value="アーリング・ハーランド">🇳🇴 アーリング・ハーランド</option>
+            <option value="マーカス・ラッシュフォード">🇬🇧 マーカス・ラッシュフォード</option>
+            <option value="久保建英">🇯🇵 久保建英</option>
+            <option value="リオネル・メッシ">🇦🇷 リオネル・メッシ</option>
+            <option value="ユセフ・エン＝ネシリ">🇲🇦 ユセフ・エン＝ネシリ</option>
+            <option value="ラミン・ヤマル">🇪🇸 ラミン・ヤマル</option>
+            <option value="ラフィーニャ">🇧🇷 ラフィーニャ</option>
+            <option value="クリスティアーノ・ロナウド">🇵🇹 クリスティアーノ・ロナウド</option>
+            <option value="フロリアン・ヴィルツ">🇩🇪 フロリアン・ヴィルツ</option>
+            <option value="キリアン・エムバペ">🇫🇷 キリアン・エムバペ</option>
+            <option value="ブカヨ・サカ">🇬🇧 ブカヨ・サカ</option>
+            <option value="ヴィクトル・ギェケレシュ">🇸🇪 ヴィクトル・ギェケレシュ</option>
+            <option value="フリアン・アルバレス">🇦🇷 フリアン・アルバレス</option>
+            <option value="その他">その他（リストにない選手）</option>
           </select>
         </div>
-        <div class="form-group" id="scorer-player-group" style="display:none">
-          <label class="form-label">👟 得点王 — 選手を選択</label>
-          <select class="form-select" id="inp-scorer-player" onchange="toggleFreeInput()">
-            <option value="">-- 選手を選択 --</option>
+        <div class="form-group" id="scorer-other-group" style="display:none">
+          <label class="form-label">👟 得点王 — 国を選択</label>
+          <select class="form-select" id="inp-scorer-country">
+            <option value="">-- 国を選択 --</option>
           </select>
-          <div class="free-input-wrap" id="scorer-free-wrap">
+          <div style="margin-top:8px">
             <input class="form-input" id="inp-scorer-free" type="text" placeholder="選手名を入力">
           </div>
         </div>
@@ -1008,17 +1033,42 @@
           <select class="form-select" id="res-runnerup"><option value="">-- 選択 --</option></select>
         </div>
         <div class="form-group">
-          <label class="form-label">👟 得点王 — 国を選択</label>
-          <select class="form-select" id="res-scorer-country" onchange="updateResScorerPlayers()">
-            <option value="">-- 国を選択 --</option>
+          <label class="form-label">👟 得点王</label>
+          <select class="form-select" id="res-scorer-select" onchange="toggleResScorerOther()">
+            <option value="">-- 選択 --</option>
+            <option value="ラウタロ・マルティネス">🇦🇷 ラウタロ・マルティネス</option>
+            <option value="上田綺世">🇯🇵 上田綺世</option>
+            <option value="ウスマン・デンベレ">🇫🇷 ウスマン・デンベレ</option>
+            <option value="ゴンサロ・ラモス">🇵🇹 ゴンサロ・ラモス</option>
+            <option value="ヴィニシウス・ジュニオール">🇧🇷 ヴィニシウス・ジュニオール</option>
+            <option value="ミケル・オヤルサバル">🇪🇸 ミケル・オヤルサバル</option>
+            <option value="ジャマル・ムシアラ">🇩🇪 ジャマル・ムシアラ</option>
+            <option value="ハリー・ケイン">🇬🇧 ハリー・ケイン</option>
+            <option value="ルイス・ディアス">🇨🇴 ルイス・ディアス</option>
+            <option value="マイケル・オリーセ">🇫🇷 マイケル・オリーセ</option>
+            <option value="ネイマール">🇧🇷 ネイマール</option>
+            <option value="アーリング・ハーランド">🇳🇴 アーリング・ハーランド</option>
+            <option value="マーカス・ラッシュフォード">🇬🇧 マーカス・ラッシュフォード</option>
+            <option value="久保建英">🇯🇵 久保建英</option>
+            <option value="リオネル・メッシ">🇦🇷 リオネル・メッシ</option>
+            <option value="ユセフ・エン＝ネシリ">🇲🇦 ユセフ・エン＝ネシリ</option>
+            <option value="ラミン・ヤマル">🇪🇸 ラミン・ヤマル</option>
+            <option value="ラフィーニャ">🇧🇷 ラフィーニャ</option>
+            <option value="クリスティアーノ・ロナウド">🇵🇹 クリスティアーノ・ロナウド</option>
+            <option value="フロリアン・ヴィルツ">🇩🇪 フロリアン・ヴィルツ</option>
+            <option value="キリアン・エムバペ">🇫🇷 キリアン・エムバペ</option>
+            <option value="ブカヨ・サカ">🇬🇧 ブカヨ・サカ</option>
+            <option value="ヴィクトル・ギェケレシュ">🇸🇪 ヴィクトル・ギェケレシュ</option>
+            <option value="フリアン・アルバレス">🇦🇷 フリアン・アルバレス</option>
+            <option value="その他">その他（リストにない選手）</option>
           </select>
         </div>
-        <div class="form-group" id="res-scorer-player-group" style="display:none">
-          <label class="form-label">👟 得点王 — 選手を選択</label>
-          <select class="form-select" id="res-scorer-player" onchange="toggleResScorerFree()">
-            <option value="">-- 選手を選択 --</option>
+        <div class="form-group" id="res-scorer-other-group" style="display:none">
+          <label class="form-label">👟 得点王 — 国を選択</label>
+          <select class="form-select" id="res-scorer-country">
+            <option value="">-- 国を選択 --</option>
           </select>
-          <div class="free-input-wrap" id="res-scorer-free-wrap">
+          <div style="margin-top:8px">
             <input class="form-input" id="res-scorer-free" type="text" placeholder="選手名を入力">
           </div>
         </div>
@@ -1439,58 +1489,49 @@ function toggleFreeInput() {
   document.getElementById('scorer-free-wrap').classList.toggle('visible', val === 'その他');
 }
 
-// 管理者用得点王（国→選手連動）
-function updateResScorerPlayers() {
-  const country = document.getElementById('res-scorer-country').value;
-  const group = document.getElementById('res-scorer-player-group');
-  const sel = document.getElementById('res-scorer-player');
-  if (!country) { group.style.display = 'none'; return; }
-  group.style.display = 'block';
-  sel.innerHTML = '<option value="">-- 選手を選択 --</option>';
-  (PLAYERS[country] || ['その他']).forEach(p => {
-    const o = document.createElement('option');
-    o.value = p; o.textContent = p;
-    sel.appendChild(o);
-  });
-  document.getElementById('res-scorer-free-wrap').classList.remove('visible');
+// エントリーフォーム：その他選択時の表示切替
+function toggleScorerOther() {
+  const val = document.getElementById('inp-scorer-select').value;
+  document.getElementById('scorer-other-group').style.display = val === 'その他' ? 'block' : 'none';
 }
 
-function toggleResScorerFree() {
-  const val = document.getElementById('res-scorer-player').value;
-  document.getElementById('res-scorer-free-wrap').classList.toggle('visible', val === 'その他');
+// 管理者：その他選択時の表示切替
+function toggleResScorerOther() {
+  const val = document.getElementById('res-scorer-select').value;
+  document.getElementById('res-scorer-other-group').style.display = val === 'その他' ? 'block' : 'none';
 }
 
 function showConfirm() {
   const name = document.getElementById('inp-name').value.trim();
   const winner = document.getElementById('inp-winner').value;
   const runnerup = document.getElementById('inp-runnerup').value;
+  const scorerSelect  = document.getElementById('inp-scorer-select').value;
   const scorerCountry = document.getElementById('inp-scorer-country').value;
-  const scorerPlayer = document.getElementById('inp-scorer-player').value;
-  const scorerFree = document.getElementById('inp-scorer-free').value.trim();
+  const scorerFree    = document.getElementById('inp-scorer-free').value.trim();
   const japan = document.getElementById('inp-japan').value;
-  const scorer = scorerPlayer === 'その他' ? scorerFree : scorerPlayer;
+  const scorer = scorerSelect === 'その他' ? scorerFree : scorerSelect;
 
   if (!name) { showToast('お名前を入力してください', true); return; }
   if (!winner) { showToast('優勝国を選択してください', true); return; }
   if (!runnerup) { showToast('準優勝国を選択してください', true); return; }
   if (winner === runnerup) { showToast('優勝国と準優勝国は異なる国を選んでください', true); return; }
-  if (!scorerCountry || !scorerPlayer) { showToast('得点王を選択してください', true); return; }
-  if (scorerPlayer === 'その他' && !scorerFree) { showToast('得点王の選手名を入力してください', true); return; }
+  if (!scorerSelect) { showToast('得点王を選択してください', true); return; }
+  if (scorerSelect === 'その他' && !scorerCountry) { showToast('得点王の国を選択してください', true); return; }
+  if (scorerSelect === 'その他' && !scorerFree) { showToast('得点王の選手名を入力してください', true); return; }
   if (!japan) { showToast('日本代表成績を選択してください', true); return; }
 
-  const scorerCountryFlag = COUNTRIES.find(c => c.name === scorerCountry)?.flag || '';
-  const winnerFlag = COUNTRIES.find(c => c.name === winner)?.flag || '';
+  const winnerFlag   = COUNTRIES.find(c => c.name === winner)?.flag || '';
   const runnerupFlag = COUNTRIES.find(c => c.name === runnerup)?.flag || '';
 
   document.getElementById('confirm-content').innerHTML = `
     <div class="confirm-item"><span class="confirm-key">お名前</span><span class="confirm-val">${name}</span></div>
     <div class="confirm-item"><span class="confirm-key">🏆 優勝国</span><span class="confirm-val">${winnerFlag} ${winner}</span></div>
     <div class="confirm-item"><span class="confirm-key">🥈 準優勝国</span><span class="confirm-val">${runnerupFlag} ${runnerup}</span></div>
-    <div class="confirm-item"><span class="confirm-key">👟 得点王</span><span class="confirm-val">${scorerCountryFlag} ${scorer}</span></div>
+    <div class="confirm-item"><span class="confirm-key">👟 得点王</span><span class="confirm-val">${scorer}</span></div>
     <div class="confirm-item"><span class="confirm-key">🇯🇵 日本成績</span><span class="confirm-val">${japan}</span></div>
   `;
 
-  window._pendingEntry = { name, winner, runnerup, scorer, scorerCountry, japan, ts: new Date().toISOString() };
+  window._pendingEntry = { name, winner, runnerup, scorer, scorerCountry: scorerCountry || '', japan, ts: new Date().toISOString() };
   document.getElementById('entry-form').classList.add('hidden');
   document.getElementById('confirm-screen').classList.add('visible');
 }
@@ -1515,12 +1556,11 @@ async function submitEntry() {
   }
   document.getElementById('confirm-screen').classList.remove('visible');
   document.getElementById('entry-form').classList.remove('hidden');
-  ['inp-name','inp-winner','inp-runnerup','inp-scorer-country','inp-japan'].forEach(id => {
+  ['inp-name','inp-winner','inp-runnerup','inp-scorer-select','inp-scorer-country','inp-japan'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('scorer-player-group').style.display = 'none';
-  document.getElementById('scorer-free-wrap').classList.remove('visible');
+  document.getElementById('scorer-other-group').style.display = 'none';
   showToast('✅ エントリーが完了しました！');
   await showPage('home');
 }
@@ -1734,9 +1774,9 @@ async function setEntryStatus(open) {
 }
 
 async function saveResults() {
-  const scorerPlayer = document.getElementById('res-scorer-player').value;
+  const scorerSelect = document.getElementById('res-scorer-select').value;
   const scorerFree   = document.getElementById('res-scorer-free').value.trim();
-  const scorer = scorerPlayer === 'その他' ? scorerFree : scorerPlayer;
+  const scorer = scorerSelect === 'その他' ? scorerFree : scorerSelect;
   const results = {
     winner:   document.getElementById('res-winner').value,
     runnerup: document.getElementById('res-runnerup').value,
