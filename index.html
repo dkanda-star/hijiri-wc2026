@@ -1858,8 +1858,9 @@ function showConfirmModal(title, msg, onOk) {
   document.getElementById('confirm-modal-msg').textContent = msg;
   _confirmCallback = onOk;
   document.getElementById('confirm-modal-ok').onclick = async () => {
-    closeConfirmModal();
-    if (_confirmCallback) await _confirmCallback();
+    const cb = _confirmCallback; // ← 先に退避
+    closeConfirmModal();         // ← closeでnullになる前に退避済み
+    if (cb) await cb();          // ← 退避したcbを実行
   };
   document.getElementById('confirm-modal').classList.add('open');
 }
