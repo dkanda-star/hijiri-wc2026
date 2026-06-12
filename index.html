@@ -1235,13 +1235,42 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxnlVsCJbt5h2QURK8Ah6bN
 // アプリ全体のキャッシュ
 let _cache = null;
 
+// JSONP方式でGASと通信（302リダイレクト問題を回避）
+function gasJsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_gasCb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('タイムアウト'));
+    }, 15000);
+
+    window[cbName] = (data) => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+
+    params.callback = cbName;
+    const qs = new URLSearchParams(params).toString();
+    script.src = `${GAS_URL}?${qs}`;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('スクリプト読み込みエラー'));
+    };
+    document.body.appendChild(script);
+  });
+}
+
 async function gasGet() {
   if (_cache) return _cache;
   showLoading(true);
   try {
-    const res = await fetch(`${GAS_URL}?action=getAll`, { redirect: 'follow' });
-    const text = await res.text();
-    const data = JSON.parse(text);
+    const data = await gasJsonp({ action: 'getAll' });
     _cache = data;
     return data;
   } catch(e) {
@@ -1255,18 +1284,12 @@ async function gasGet() {
 
 async function gasPost(action, payload) {
   showLoading(true);
-  console.log('[GAS] POST開始:', action, payload);
+  console.log('[GAS] リクエスト:', action, payload);
   try {
-    const params = new URLSearchParams({
+    const data = await gasJsonp({
       action,
       payload: JSON.stringify(payload || {}),
     });
-    const url = `${GAS_URL}?${params.toString()}`;
-    console.log('[GAS] URL:', url);
-    const res = await fetch(url, { redirect: 'follow' });
-    const text = await res.text();
-    console.log('[GAS] レスポンス raw:', text.substring(0, 200));
-    const data = JSON.parse(text);
     console.log('[GAS] レスポンス:', data);
     _cache = null;
     return data;
