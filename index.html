@@ -1253,17 +1253,21 @@ async function gasGet() {
 
 async function gasPost(action, payload) {
   showLoading(true);
+  console.log('[GAS] POST開始:', action, payload);
   try {
-    // GETパラメータでリクエスト（CORS対応）
     const params = new URLSearchParams({
       action,
       payload: JSON.stringify(payload || {}),
     });
-    const res = await fetch(`${GAS_URL}?${params.toString()}`);
+    const url = `${GAS_URL}?${params.toString()}`;
+    console.log('[GAS] URL:', url);
+    const res = await fetch(url);
     const data = await res.json();
+    console.log('[GAS] レスポンス:', data);
     _cache = null;
     return data;
   } catch(e) {
+    console.error('[GAS] エラー:', e);
     showToast('通信エラーが発生しました', true);
     return { error: e.message };
   } finally {
@@ -1574,6 +1578,8 @@ const PHASE_LABELS = {
 };
 
 async function renderMatches() {
+  _cache = null;
+  await gasGet(); // ← 試合タブ表示時に最新データ取得
   const el = document.getElementById('matches-list');
   const matches = getMatches();
 
@@ -1655,6 +1661,8 @@ async function switchMatchPhase(phase) {
 // ====================================================
 async function adminLogin() {
   const pw = document.getElementById('admin-pw').value;
+  _cache = null;
+  await gasGet(); // ← ログイン時に最新データ取得
   const settings = await DB.getSettings();
   if (pw === settings.adminPw) {
     isAdmin = true;
@@ -1862,6 +1870,9 @@ async function onAdminMatchSelect() {
   if (!id) { group.style.display = 'none'; return; }
   group.style.display = 'block';
 
+  _cache = null;
+  await gasGet(); // ← 試合選択時に最新データ取得
+
   const matches = getMatches();
   const m = matches.find(x => x.id === id);
 
@@ -2031,14 +2042,18 @@ async function resetMatchTeams_slot(id, slot, originalValue) {
 
 async function saveMatchScore_admin() {
   const id = parseInt(document.getElementById('admin-match-select').value);
+  console.log('[SCORE] 保存開始 id:', id);
   if (!id) { showToast('試合を選択してください', true); return; }
   const score = document.getElementById('score-preview').textContent;
+  console.log('[SCORE] スコア:', score);
   if (!score || score === '0-0') {
     showToast('スコアを入力してください（0-0は保存できません）', true); return;
   }
   await saveMatchScore(id, score);
+  console.log('[SCORE] GAS保存完了');
   _cache = null;
   await gasGet();
+  console.log('[SCORE] キャッシュ更新完了');
   await propagateWinner(id, score);
   await initAdminMatchSelect();
   await initAdminTeamMatchSelect();
