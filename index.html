@@ -1605,10 +1605,13 @@ const PHASE_LABELS = {
 };
 
 async function renderMatches() {
+  console.log('[RENDER] renderMatches開始');
   _cache = null;
-  await gasGet(); // ← 試合タブ表示時に最新データ取得
+  await gasGet();
+  console.log('[RENDER] gasGet完了、_cache:', JSON.stringify(_cache?.scores));
   const el = document.getElementById('matches-list');
   const matches = getMatches();
+  console.log('[RENDER] #2のスコア:', matches.find(m=>m.id===2)?.score);
 
   // Phase filter
   const phaseMap = {
