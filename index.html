@@ -1254,12 +1254,14 @@ async function gasGet() {
 async function gasPost(action, payload) {
   showLoading(true);
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action, payload }),
+    // GETパラメータでリクエスト（CORS対応）
+    const params = new URLSearchParams({
+      action,
+      payload: JSON.stringify(payload || {}),
     });
+    const res = await fetch(`${GAS_URL}?${params.toString()}`);
     const data = await res.json();
-    _cache = null; // キャッシュクリアして次回再取得
+    _cache = null;
     return data;
   } catch(e) {
     showToast('通信エラーが発生しました', true);
@@ -1321,7 +1323,7 @@ let currentPage = 'home';
 let currentDist = 'winner';
 let isAdmin = false;
 
-async function showPage(p) {
+function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
@@ -1329,7 +1331,7 @@ async function showPage(p) {
   const order = ['home','entry','distribution','participants','matches','admin'];
   btns[order.indexOf(p)].classList.add('active');
   currentPage = p;
-  refreshPage(p);
+  refreshPage(p); // awaitしない＝画面切替を即時実行、データ読込はバックグラウンド
 }
 
 async function refreshPage(p) {
@@ -1490,7 +1492,7 @@ function showDist(type) {
   currentDist = type;
   document.querySelectorAll('.dist-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.dist-tab')[['winner','runnerup','scorer','japan'].indexOf(type)].classList.add('active');
-  renderDist(type);
+  renderDist(type); // awaitしない
 }
 
 async function renderDist(type) {
@@ -1643,7 +1645,7 @@ async function switchMatchPhase(phase) {
   document.querySelectorAll('.match-phase-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.phase === phase);
   });
-  await renderMatches();
+  renderMatches(); // awaitしない
 }
 
 // ====================================================
@@ -2118,11 +2120,13 @@ async function resetMatchData() {
 }
 
 // ====================================================
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   populateCountries();
-  await gasGet();
-  await renderHome();
-  await renderMatches();
+  renderMatches(); // 試合はキャッシュ不要なので即表示
+  gasGet().then(() => {  // GASデータをバックグラウンドで取得後、ホームを更新
+    renderHome();
+    renderEntry();
+  });
 });
 </script>
 </body>
