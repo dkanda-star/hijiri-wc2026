@@ -591,6 +591,8 @@
     margin: 16px 0;
   }
 
+  @keyframes loadbar { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
+
   /* SCORE PICKER */
   .score-type-btn {
     padding: 7px 16px;
@@ -656,6 +658,8 @@
 <body>
 
 <div class="header">
+  <!-- ローディングバー -->
+  <div id="loading-bar" style="display:none;position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));animation:loadbar 1s infinite linear;"></div>
   <div class="header-eyebrow">FIFA World Cup 2026</div>
   <div class="header-title">HIJIRI <span>WC</span> PREDICT</div>
 </div>
@@ -1004,8 +1008,19 @@
           <select class="form-select" id="res-runnerup"><option value="">-- 選択 --</option></select>
         </div>
         <div class="form-group">
-          <label class="form-label">👟 得点王（選手名）</label>
-          <input class="form-input" id="res-scorer" type="text" placeholder="例：エムバペ">
+          <label class="form-label">👟 得点王 — 国を選択</label>
+          <select class="form-select" id="res-scorer-country" onchange="updateResScorerPlayers()">
+            <option value="">-- 国を選択 --</option>
+          </select>
+        </div>
+        <div class="form-group" id="res-scorer-player-group" style="display:none">
+          <label class="form-label">👟 得点王 — 選手を選択</label>
+          <select class="form-select" id="res-scorer-player" onchange="toggleResScorerFree()">
+            <option value="">-- 選手を選択 --</option>
+          </select>
+          <div class="free-input-wrap" id="res-scorer-free-wrap">
+            <input class="form-input" id="res-scorer-free" type="text" placeholder="選手名を入力">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">🇯🇵 日本代表成績</label>
@@ -1211,47 +1226,93 @@ const MATCHES_MASTER = [
   {id:104,date:"7/20(月) 04:00",t1:"SF-①勝者",   t2:"SF-②勝者",   phase:"決勝",     bc:"NHK",  bcClass:"bc-nhk",  score:null},
 ];
 
+// ====================================================
+// GAS API データレイヤー
+// ★ デプロイ後にGASのURLをここに貼り付けてください
+// ====================================================
+const GAS_URL = 'ここにGASのURLを貼り付け';
+
+// アプリ全体のキャッシュ
+let _cache = null;
+
+async function gasGet() {
+  if (_cache) return _cache;
+  showLoading(true);
+  try {
+    const res = await fetch(`${GAS_URL}?action=getAll`);
+    const data = await res.json();
+    _cache = data;
+    return data;
+  } catch(e) {
+    showToast('通信エラー。再読み込みしてください', true);
+    return { entries: [], scores: [], teams: [], settings: [], results: [] };
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function gasPost(action, payload) {
+  showLoading(true);
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action, payload }),
+    });
+    const data = await res.json();
+    _cache = null; // キャッシュクリアして次回再取得
+    return data;
+  } catch(e) {
+    showToast('通信エラーが発生しました', true);
+    return { error: e.message };
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showLoading(show) {
+  const el = document.getElementById('loading-bar');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+const DB = {
+  getEntries:   async () => { const d = await gasGet(); return d.entries || []; },
+  addEntry:     async (e) => gasPost('addEntry', e),
+  deleteEntry:  async (i) => gasPost('deleteEntry', { index: i }),
+  getSettings:  async () => {
+    const d = await gasGet();
+    const s = d.settings?.[0];
+    return s ? { open: s.open === 'true', adminPw: s.adminPw } : { open: true, adminPw: 'hijiri2026' };
+  },
+  saveSettings: async (s) => gasPost('saveSettings', s),
+  getResults:   async () => { const d = await gasGet(); return d.results?.[0] || null; },
+  saveResults:  async (r) => gasPost('saveResults', r),
+};
+
 function getMatches() {
-  const scores = JSON.parse(localStorage.getItem('wc26_match_scores') || '{}');
-  const teams  = JSON.parse(localStorage.getItem('wc26_match_teams')  || '{}');
+  const scores = Object.fromEntries((_cache?.scores || []).map(r => [String(r.id), r.score]));
+  const teams  = Object.fromEntries((_cache?.teams  || []).map(r => [String(r.id), { t1: r.t1, t2: r.t2 }]));
   return MATCHES_MASTER.map(m => ({
     ...m,
-    score: scores[m.id] !== undefined ? scores[m.id] : m.score,
-    t1: teams[m.id]?.t1 ?? m.t1,
-    t2: teams[m.id]?.t2 ?? m.t2,
+    score: scores[String(m.id)] !== undefined ? scores[String(m.id)] : m.score,
+    t1: teams[String(m.id)]?.t1 ?? m.t1,
+    t2: teams[String(m.id)]?.t2 ?? m.t2,
   }));
 }
 
-function saveMatchScore(id, score) {
-  const saved = JSON.parse(localStorage.getItem('wc26_match_scores') || '{}');
-  saved[id] = score;
-  localStorage.setItem('wc26_match_scores', JSON.stringify(saved));
+async function saveMatchScore(id, score) {
+  await gasPost('saveScore', { id, score });
 }
 
-function saveMatchTeams(id, t1, t2) {
-  const saved = JSON.parse(localStorage.getItem('wc26_match_teams') || '{}');
-  saved[id] = { t1, t2 };
-  localStorage.setItem('wc26_match_teams', JSON.stringify(saved));
+async function saveMatchTeams(id, t1, t2) {
+  await gasPost('saveTeams', { id, t1, t2 });
 }
 
-function resetMatchTeams(id) {
-  const saved = JSON.parse(localStorage.getItem('wc26_match_teams') || '{}');
-  delete saved[id];
-  localStorage.setItem('wc26_match_teams', JSON.stringify(saved));
+async function resetMatchTeams(id) {
+  const master = MATCHES_MASTER.find(x => x.id === id);
+  await gasPost('saveTeams', { id, t1: master.t1, t2: master.t2 });
 }
 
-// ====================================================
-// LOCAL STORAGE DATA LAYER
-// (本番時はGASのWebアプリAPIに差し替える)
-// ====================================================
-const DB = {
-  getEntries: () => JSON.parse(localStorage.getItem('wc26_entries') || '[]'),
-  saveEntries: (e) => localStorage.setItem('wc26_entries', JSON.stringify(e)),
-  getSettings: () => JSON.parse(localStorage.getItem('wc26_settings') || '{"open":true,"adminPw":"hijiri2026"}'),
-  saveSettings: (s) => localStorage.setItem('wc26_settings', JSON.stringify(s)),
-  getResults: () => JSON.parse(localStorage.getItem('wc26_results') || 'null'),
-  saveResults: (r) => localStorage.setItem('wc26_results', JSON.stringify(r)),
-};
+
 
 // ====================================================
 // NAVIGATION
@@ -1260,7 +1321,7 @@ let currentPage = 'home';
 let currentDist = 'winner';
 let isAdmin = false;
 
-function showPage(p) {
+async function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
@@ -1271,19 +1332,19 @@ function showPage(p) {
   refreshPage(p);
 }
 
-function refreshPage(p) {
-  if (p === 'home') renderHome();
-  if (p === 'entry') renderEntry();
-  if (p === 'distribution') renderDist(currentDist);
-  if (p === 'participants') renderParticipants();
-  if (p === 'matches') renderMatches();
+async function refreshPage(p) {
+  if (p === 'home') await renderHome();
+  if (p === 'entry') await renderEntry();
+  if (p === 'distribution') await renderDist(currentDist);
+  if (p === 'participants') await renderParticipants();
+  if (p === 'matches') await renderMatches();
 }
 
 // ====================================================
 // HOME
 // ====================================================
-function renderHome() {
-  const entries = DB.getEntries();
+async function renderHome() {
+  const entries = await DB.getEntries();
   const pot = entries.length * 1000;
   document.getElementById('pot-amount').textContent = pot.toLocaleString();
   document.getElementById('entry-count-home').textContent = entries.length;
@@ -1292,8 +1353,8 @@ function renderHome() {
 // ====================================================
 // ENTRY FORM
 // ====================================================
-function renderEntry() {
-  const settings = DB.getSettings();
+async function renderEntry() {
+  const settings = await DB.getSettings();
   document.getElementById('entry-closed').style.display = settings.open ? 'none' : 'block';
   document.getElementById('entry-form').style.display = settings.open ? 'block' : 'none';
   document.getElementById('confirm-screen').classList.remove('visible');
@@ -1302,7 +1363,7 @@ function renderEntry() {
 }
 
 function populateCountries() {
-  const selectors = ['#inp-winner','#inp-runnerup','#inp-scorer-country','#res-winner','#res-runnerup'];
+  const selectors = ['#inp-winner','#inp-runnerup','#inp-scorer-country','#res-winner','#res-runnerup','#res-scorer-country'];
   selectors.forEach(sel => {
     const el = document.querySelector(sel);
     if (!el) return;
@@ -1336,6 +1397,27 @@ function updateScorerPlayers() {
 function toggleFreeInput() {
   const val = document.getElementById('inp-scorer-player').value;
   document.getElementById('scorer-free-wrap').classList.toggle('visible', val === 'その他');
+}
+
+// 管理者用得点王（国→選手連動）
+function updateResScorerPlayers() {
+  const country = document.getElementById('res-scorer-country').value;
+  const group = document.getElementById('res-scorer-player-group');
+  const sel = document.getElementById('res-scorer-player');
+  if (!country) { group.style.display = 'none'; return; }
+  group.style.display = 'block';
+  sel.innerHTML = '<option value="">-- 選手を選択 --</option>';
+  (PLAYERS[country] || ['その他']).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+  document.getElementById('res-scorer-free-wrap').classList.remove('visible');
+}
+
+function toggleResScorerFree() {
+  const val = document.getElementById('res-scorer-player').value;
+  document.getElementById('res-scorer-free-wrap').classList.toggle('visible', val === 'その他');
 }
 
 function showConfirm() {
@@ -1378,28 +1460,27 @@ function backToForm() {
   document.getElementById('confirm-screen').classList.remove('visible');
 }
 
-function submitEntry() {
+async function submitEntry() {
   const btn = document.getElementById('submit-btn');
   btn.innerHTML = '<span class="spinner"></span>送信中...';
   btn.disabled = true;
-  setTimeout(() => {
-    const entries = DB.getEntries();
-    entries.push(window._pendingEntry);
-    DB.saveEntries(entries);
-    btn.innerHTML = '🚀 エントリーする';
-    btn.disabled = false;
-    document.getElementById('confirm-screen').classList.remove('visible');
-    document.getElementById('entry-form').classList.remove('hidden');
-    // Reset form
-    ['inp-name','inp-winner','inp-runnerup','inp-scorer-country','inp-japan'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    document.getElementById('scorer-player-group').style.display = 'none';
-    document.getElementById('scorer-free-wrap').classList.remove('visible');
-    showToast('✅ エントリーが完了しました！');
-    showPage('home');
-  }, 800);
+  const result = await DB.addEntry(window._pendingEntry);
+  btn.innerHTML = '🚀 エントリーする';
+  btn.disabled = false;
+  if (result?.error) {
+    showToast('送信エラー: ' + result.error, true);
+    return;
+  }
+  document.getElementById('confirm-screen').classList.remove('visible');
+  document.getElementById('entry-form').classList.remove('hidden');
+  ['inp-name','inp-winner','inp-runnerup','inp-scorer-country','inp-japan'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('scorer-player-group').style.display = 'none';
+  document.getElementById('scorer-free-wrap').classList.remove('visible');
+  showToast('✅ エントリーが完了しました！');
+  await showPage('home');
 }
 
 // ====================================================
@@ -1412,8 +1493,8 @@ function showDist(type) {
   renderDist(type);
 }
 
-function renderDist(type) {
-  const entries = DB.getEntries();
+async function renderDist(type) {
+  const entries = await DB.getEntries();
   const el = document.getElementById('dist-content');
   if (entries.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">まだエントリーがありません</div></div>';
@@ -1450,8 +1531,8 @@ function renderDist(type) {
 // ====================================================
 // PARTICIPANTS
 // ====================================================
-function renderParticipants() {
-  const entries = DB.getEntries();
+async function renderParticipants() {
+  const entries = await DB.getEntries();
   const el = document.getElementById('participants-list');
   if (entries.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">まだエントリーがありません</div></div>';
@@ -1488,7 +1569,7 @@ const PHASE_LABELS = {
   'F': '決勝/3位',
 };
 
-function renderMatches() {
+async function renderMatches() {
   const el = document.getElementById('matches-list');
   const matches = getMatches();
 
@@ -1557,29 +1638,29 @@ function renderMatches() {
   el.innerHTML = html || '<div class="empty-state"><div class="empty-icon">⚽</div><div class="empty-text">試合なし</div></div>';
 }
 
-function switchMatchPhase(phase) {
+async function switchMatchPhase(phase) {
   currentMatchPhase = phase;
   document.querySelectorAll('.match-phase-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.phase === phase);
   });
-  renderMatches();
+  await renderMatches();
 }
 
 // ====================================================
 // ADMIN
 // ====================================================
-function adminLogin() {
+async function adminLogin() {
   const pw = document.getElementById('admin-pw').value;
-  const settings = DB.getSettings();
+  const settings = await DB.getSettings();
   if (pw === settings.adminPw) {
     isAdmin = true;
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
-    renderAdminEntries();
-    renderAdminRanking();
+    await renderAdminEntries();
+    await renderAdminRanking();
     populateCountries();
-    initAdminMatchSelect();
-    initAdminTeamMatchSelect();
+    await initAdminMatchSelect();
+    await initAdminTeamMatchSelect();
     showToast('✅ ログインしました');
   } else {
     showToast('パスワードが違います', true);
@@ -1593,31 +1674,34 @@ function adminLogout() {
   document.getElementById('admin-pw').value = '';
 }
 
-function setEntryStatus(open) {
-  const s = DB.getSettings();
+async function setEntryStatus(open) {
+  const s = await DB.getSettings();
   s.open = open;
-  DB.saveSettings(s);
+  await DB.saveSettings(s);
   showToast(open ? '✅ 受付を開始しました' : '🔒 エントリーを締め切りました');
 }
 
-function saveResults() {
+async function saveResults() {
+  const scorerPlayer = document.getElementById('res-scorer-player').value;
+  const scorerFree   = document.getElementById('res-scorer-free').value.trim();
+  const scorer = scorerPlayer === 'その他' ? scorerFree : scorerPlayer;
   const results = {
-    winner: document.getElementById('res-winner').value,
+    winner:   document.getElementById('res-winner').value,
     runnerup: document.getElementById('res-runnerup').value,
-    scorer: document.getElementById('res-scorer').value.trim(),
-    japan: document.getElementById('res-japan').value,
+    scorer,
+    japan:    document.getElementById('res-japan').value,
   };
-  if (!results.winner || !results.runnerup || !results.scorer || !results.japan) {
+  if (!results.winner || !results.runnerup || !scorer || !results.japan) {
     showToast('全項目を入力してください', true); return;
   }
-  DB.saveResults(results);
+  await DB.saveResults(results);
   showToast('💾 結果を保存しました。集計中...');
-  setTimeout(() => { renderAdminRanking(); }, 500);
+  setTimeout(async () => { await renderAdminRanking(); }, 500);
 }
 
-function calcRanking() {
-  const entries = DB.getEntries();
-  const results = DB.getResults();
+async function calcRanking() {
+  const entries = await DB.getEntries();
+  const results = await DB.getResults();
   if (!results) return [];
 
   return entries.map(e => {
@@ -1669,8 +1753,8 @@ function calcHijiri(ranked) {
   return result;
 }
 
-function renderAdminRanking() {
-  const results = DB.getResults();
+async function renderAdminRanking() {
+  const results = await DB.getResults();
   const el = document.getElementById('admin-ranking');
   if (!results) { el.style.display = 'none'; return; }
   const ranked = calcRanking();
@@ -1692,8 +1776,8 @@ function renderAdminRanking() {
   `).join('');
 }
 
-function renderAdminEntries() {
-  const entries = DB.getEntries();
+async function renderAdminEntries() {
+  const entries = await DB.getEntries();
   const el = document.getElementById('admin-entries-list');
   if (entries.length === 0) {
     el.innerHTML = '<div style="color:var(--gray);font-size:13px">エントリーなし</div>'; return;
@@ -1709,15 +1793,13 @@ function renderAdminEntries() {
   `).join('');
 }
 
-function deleteEntry(i) {
+async function deleteEntry(i) {
   showConfirmModal(
     'エントリーを削除',
     'このエントリーを削除しますか？\n削除後は元に戻せません。',
-    () => {
-      const entries = DB.getEntries();
-      entries.splice(i, 1);
-      DB.saveEntries(entries);
-      renderAdminEntries();
+    async () => {
+      await DB.deleteEntry(i);
+      await renderAdminEntries();
       showToast('🗑️ 削除しました');
     }
   );
@@ -1752,7 +1834,7 @@ function showToast(msg, error=false) {
   setTimeout(() => { t.classList.remove('show'); }, 2500);
 }
 
-function initAdminMatchSelect() {
+async function initAdminMatchSelect() {
   const sel = document.getElementById('admin-match-select');
   const matches = getMatches();
   sel.innerHTML = '<option value="">-- 試合を選択 --</option>';
@@ -1768,7 +1850,7 @@ function initAdminMatchSelect() {
 // score state
 let _scoreState = { g1:0, g2:0, pk1:0, pk2:0, type:'normal' };
 
-function onAdminMatchSelect() {
+async function onAdminMatchSelect() {
   const id = parseInt(document.getElementById('admin-match-select').value);
   const group = document.getElementById('admin-score-group');
   if (!id) { group.style.display = 'none'; return; }
@@ -1894,7 +1976,7 @@ function getLoserFromScore(score, t1, t2) {
 }
 
 // 勝者を次の試合枠に自動反映
-function propagateWinner(matchId, score) {
+async function propagateWinner(matchId, score) {
   const mapping = WINNER_MAP[matchId];
   if (!mapping) return;
 
@@ -1906,75 +1988,70 @@ function propagateWinner(matchId, score) {
   const loser  = getLoserFromScore(score, m.t1, m.t2);
 
   if (winner) {
-    saveMatchTeams_slot(mapping.nextId, mapping.slot, winner);
+    await saveMatchTeams_slot(mapping.nextId, mapping.slot, winner);
   }
   if (mapping.loserNextId && loser) {
-    saveMatchTeams_slot(mapping.loserNextId, mapping.loserSlot, loser);
+    await saveMatchTeams_slot(mapping.loserNextId, mapping.loserSlot, loser);
   }
 }
 
 // 伝播のクリア（スコアをリセットした時）
-function clearPropagation(matchId) {
+async function clearPropagation(matchId) {
   const mapping = WINNER_MAP[matchId];
   if (!mapping) return;
   const master = MATCHES_MASTER.find(x => x.id === mapping.nextId);
-  if (master) resetMatchTeams_slot(mapping.nextId, mapping.slot, master[mapping.slot]);
+  if (master) await resetMatchTeams_slot(mapping.nextId, mapping.slot, master[mapping.slot]);
   if (mapping.loserNextId) {
     const loserMaster = MATCHES_MASTER.find(x => x.id === mapping.loserNextId);
-    if (loserMaster) resetMatchTeams_slot(mapping.loserNextId, mapping.loserSlot, loserMaster[mapping.loserSlot]);
+    if (loserMaster) await resetMatchTeams_slot(mapping.loserNextId, mapping.loserSlot, loserMaster[mapping.loserSlot]);
   }
 }
 
-function saveMatchTeams_slot(id, slot, value) {
-  const saved = JSON.parse(localStorage.getItem('wc26_match_teams') || '{}');
-  if (!saved[id]) saved[id] = {};
-  // 反対側のslotは既存値を保持
+async function saveMatchTeams_slot(id, slot, value) {
   const matches = getMatches();
   const m = matches.find(x => x.id === id);
-  saved[id].t1 = slot === 't1' ? value : (saved[id].t1 ?? m?.t1);
-  saved[id].t2 = slot === 't2' ? value : (saved[id].t2 ?? m?.t2);
-  localStorage.setItem('wc26_match_teams', JSON.stringify(saved));
+  const t1 = slot === 't1' ? value : (m?.t1 ?? '');
+  const t2 = slot === 't2' ? value : (m?.t2 ?? '');
+  await saveMatchTeams(id, t1, t2);
 }
 
-function resetMatchTeams_slot(id, slot, originalValue) {
-  const saved = JSON.parse(localStorage.getItem('wc26_match_teams') || '{}');
-  if (!saved[id]) return;
-  saved[id][slot] = originalValue;
-  // 両方マスター値に戻ったら削除
-  const master = MATCHES_MASTER.find(x => x.id === id);
-  if (saved[id].t1 === master?.t1 && saved[id].t2 === master?.t2) delete saved[id];
-  localStorage.setItem('wc26_match_teams', JSON.stringify(saved));
+async function resetMatchTeams_slot(id, slot, originalValue) {
+  const matches = getMatches();
+  const m = matches.find(x => x.id === id);
+  const t1 = slot === 't1' ? originalValue : (m?.t1 ?? '');
+  const t2 = slot === 't2' ? originalValue : (m?.t2 ?? '');
+  await saveMatchTeams(id, t1, t2);
 }
 
-function saveMatchScore_admin() {
+async function saveMatchScore_admin() {
   const id = parseInt(document.getElementById('admin-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
   const score = document.getElementById('score-preview').textContent;
   saveMatchScore(id, score);
-  propagateWinner(id, score);  // ← 自動反映
-  initAdminMatchSelect();
-  initAdminTeamMatchSelect();
+  await propagateWinner(id, score);  // ← 自動反映
+  await initAdminMatchSelect();
+  await initAdminTeamMatchSelect();
   showToast(`✅ #${id} "${score}" を保存しました`);
-  if (currentPage === 'matches') renderMatches();
+  if (currentPage === 'matches') await renderMatches();
 }
 
-function clearMatchScore_admin() {
+async function clearMatchScore_admin() {
   const id = parseInt(document.getElementById('admin-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
   saveMatchScore(id, null);
-  clearPropagation(id);  // ← 自動クリア
+  await clearPropagation(id);  // ← 自動クリア
   _scoreState = { g1:0, g2:0, pk1:0, pk2:0, type:'normal' };
   applyScoreState();
-  initAdminMatchSelect();
-  initAdminTeamMatchSelect();
+  await initAdminMatchSelect();
+  await initAdminTeamMatchSelect();
   showToast(`🗑️ #${id} のスコアをクリアしました`);
-  if (currentPage === 'matches') renderMatches();
+  if (currentPage === 'matches') await renderMatches();
 }
 
 // R32以降のみ対象フェーズ
 const KNOCKOUT_PHASES = ['ラウンド32','ラウンド16','準々決勝','準決勝','3位決定戦','決勝'];
 
-function initAdminTeamMatchSelect() {
+async function initAdminTeamMatchSelect() {
   const sel = document.getElementById('admin-team-match-select');
   const matches = getMatches().filter(m => KNOCKOUT_PHASES.includes(m.phase));
   sel.innerHTML = '<option value="">-- 試合を選択 --</option>';
@@ -1989,7 +2066,7 @@ function initAdminTeamMatchSelect() {
   });
 }
 
-function onAdminTeamMatchSelect() {
+async function onAdminTeamMatchSelect() {
   const id = parseInt(document.getElementById('admin-team-match-select').value);
   const group = document.getElementById('admin-team-edit-group');
   if (!id) { group.style.display = 'none'; return; }
@@ -1999,53 +2076,53 @@ function onAdminTeamMatchSelect() {
   document.getElementById('admin-team-t2').value = m.t2;
 }
 
-function saveTeamNames() {
+async function saveTeamNames() {
   const id = parseInt(document.getElementById('admin-team-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
   const t1 = document.getElementById('admin-team-t1').value.trim();
   const t2 = document.getElementById('admin-team-t2').value.trim();
   if (!t1 || !t2) { showToast('両チーム名を入力してください', true); return; }
-  saveMatchTeams(id, t1, t2);
-  initAdminTeamMatchSelect();
-  initAdminMatchSelect(); // スコア入力セレクトにも反映
+  await saveMatchTeams(id, t1, t2);
+  await initAdminTeamMatchSelect();
+  await initAdminMatchSelect(); // スコア入力セレクトにも反映
   showToast(`✅ #${id} 対戦カードを更新しました`);
-  if (currentPage === 'matches') renderMatches();
+  if (currentPage === 'matches') await renderMatches();
 }
 
-function resetTeamNames() {
+async function resetTeamNames() {
   const id = parseInt(document.getElementById('admin-team-match-select').value);
   if (!id) { showToast('試合を選択してください', true); return; }
-  resetMatchTeams(id);
+  await resetMatchTeams(id);
   // 入力欄をマスターの元の値に戻す
   const master = MATCHES_MASTER.find(x => x.id === id);
   document.getElementById('admin-team-t1').value = master.t1;
   document.getElementById('admin-team-t2').value = master.t2;
-  initAdminTeamMatchSelect();
-  initAdminMatchSelect();
+  await initAdminTeamMatchSelect();
+  await initAdminMatchSelect();
   showToast(`↩️ #${id} を初期値にリセットしました`);
-  if (currentPage === 'matches') renderMatches();
+  if (currentPage === 'matches') await renderMatches();
 }
 
-function resetMatchData() {
+async function resetMatchData() {
   showConfirmModal(
     '試合データをリセット',
     'スコアと対戦カードの全データをリセットします。\nエントリーデータは消えません。',
-    () => {
-      localStorage.removeItem('wc26_match_scores');
-      localStorage.removeItem('wc26_match_teams');
-      initAdminMatchSelect();
-      initAdminTeamMatchSelect();
-      if (currentPage === 'matches') renderMatches();
+    async () => {
+      await gasPost('resetMatch', {});
+      await initAdminMatchSelect();
+      await initAdminTeamMatchSelect();
+      if (currentPage === 'matches') await renderMatches();
       showToast('🗑️ 試合データをリセットしました');
     }
   );
 }
 
 // ====================================================
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   populateCountries();
-  renderHome();
-  renderMatches();
+  await gasGet();
+  await renderHome();
+  await renderMatches();
 });
 </script>
 </body>
