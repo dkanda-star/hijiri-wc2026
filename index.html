@@ -1453,7 +1453,7 @@ const DB = {
   getSettings:  async () => {
     const d = await gasGet();
     const s = d.settings?.[0];
-    return s ? { open: s.open === 'true', adminPw: s.adminPw } : { open: true, adminPw: 'hijiri2026' };
+    return s ? { open: String(s.open).toLowerCase() === 'true', adminPw: s.adminPw } : { open: true, adminPw: 'hijiri2026' };
   },
   saveSettings: async (s) => gasPost('saveSettings', s),
   getResults:   async () => { const d = await gasGet(); return d.results?.[0] || null; },
