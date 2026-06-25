@@ -666,10 +666,9 @@
 
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('home')">🏠 ホーム</button>
-  <button class="nav-btn" onclick="showPage('entry')">✏️ エントリー</button>
+  <button class="nav-btn" onclick="showPage('matches')">⚽ 試合</button>
   <button class="nav-btn" onclick="showPage('distribution')">📊 分布</button>
   <button class="nav-btn" onclick="showPage('participants')">👥 参加者</button>
-  <button class="nav-btn" onclick="showPage('matches')">⚽ 試合</button>
   <button class="nav-btn" onclick="showPage('admin')">🔐 管理</button>
 </nav>
 
@@ -717,7 +716,9 @@
     </div>
 
     <div style="margin-top:8px">
+      <!-- エントリー締切のため非表示
       <button class="btn btn-primary" onclick="showPage('entry')">✏️ 今すぐエントリーする</button>
+      -->
       <a href="https://qr.paypay.ne.jp/p2p01_zxNlyZQNwykIcGHt" target="_blank" rel="noopener" class="btn" style="margin-top:8px;display:block;background:#FFFFFF;color:#E30012;text-decoration:none;border:2px solid #E30012">PayPayリンク</a>
     </div>
   </div>
@@ -1499,7 +1500,7 @@ function showPage(p) {
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
   const btns = document.querySelectorAll('.nav-btn');
-  const order = ['home','entry','distribution','participants','matches','admin'];
+  const order = ['home','matches','distribution','participants','admin'];
   btns[order.indexOf(p)].classList.add('active');
   currentPage = p;
   refreshPage(p); // awaitしない＝画面切替を即時実行、データ読込はバックグラウンド
